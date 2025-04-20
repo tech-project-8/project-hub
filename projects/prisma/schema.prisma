@@ -1,0 +1,137 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(uuid())
+  name          String
+  email         String    @unique
+  password      String
+  role          Role      @default(CLIENT)
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  
+  // Relations
+  projects      Project[]
+  sentMessages     Message[]  @relation("SentMessages")
+  receivedMessages Message[]  @relation("ReceivedMessages")
+
+  @@map("users")
+}
+
+model Project {
+  id            String    @id @default(uuid())
+  title         String
+  description   String?
+  type          ProjectType
+  status        ProjectStatus @default(PENDING)
+  clientId      String    @map("client_id")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  
+  // Relations
+  client        User      @relation(fields: [clientId], references: [id])
+  requirements  Requirement[]
+  transactions  Transaction[]
+  files         File[]
+
+  @@map("projects")
+}
+
+model Requirement {
+  id            String    @id @default(uuid())
+  description   String
+  status        RequirementStatus @default(PENDING)
+  projectId     String    @map("project_id")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  
+  // Relations
+  project       Project   @relation(fields: [projectId], references: [id])
+
+  @@map("requirements")
+}
+
+model Message {
+  id            String    @id @default(uuid())
+  content       String
+  read          Boolean   @default(false)
+  senderId      String    @map("sender_id")
+  receiverId    String    @map("receiver_id")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  
+  // Relations
+  sender        User      @relation("SentMessages", fields: [senderId], references: [id])
+  receiver      User      @relation("ReceivedMessages", fields: [receiverId], references: [id])
+
+  @@map("messages")
+}
+
+model Transaction {
+  id            String    @id @default(uuid())
+  amount        Float
+  status        TransactionStatus @default(PENDING)
+  paymentMethod String?   @map("payment_method")
+  projectId     String    @map("project_id")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  
+  // Relations
+  project       Project   @relation(fields: [projectId], references: [id])
+
+  @@map("transactions")
+}
+
+model File {
+  id            String    @id @default(uuid())
+  name          String
+  path          String
+  size          Int
+  type          String
+  projectId     String    @map("project_id")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  
+  // Relations
+  project       Project   @relation(fields: [projectId], references: [id])
+
+  @@map("files")
+}
+
+enum Role {
+  ADMIN
+  CLIENT
+}
+
+enum ProjectType {
+  DYNAMIC
+  STATIC
+}
+
+enum ProjectStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum RequirementStatus {
+  PENDING
+  APPROVED
+  COMPLETED
+  REJECTED
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
